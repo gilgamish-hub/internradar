@@ -1,88 +1,129 @@
 {% extends "base.html" %}
-{% block title %}Admin &mdash; {{ brand }}{% endblock %}
+{% block title %}Admin — {{ brand }}{% endblock %}
 
 {% block body %}
-<h1>Operator</h1>
-<p class="lede">The state of the portal: who is enrolled, how fresh each field's pool is,
-  and whether email works.</p>
+<div class="stack lg">
 
-{% if mail_status %}<div class="notice info">{{ mail_status }}</div>{% endif %}
+  <div>
+    <h1>Operator</h1>
+    <p class="muted" style="margin-top:6px">
+      Who is enrolled, how fresh each field's pool is, and whether email works.
+    </p>
+  </div>
 
-<div class="stats">
-  <div class="stat"><b>{{ students | length }}</b><span>students</span></div>
-  <div class="stat"><b>{{ pool }}</b><span>internships pooled</span></div>
-  <div class="stat"><b>{{ due_fields | length }}</b><span>fields due a scan</span></div>
-  <div class="stat"><b>{{ utils.parse_iso(last_tick.at) | when if last_tick.at else 'not yet' }}</b>
-    <span>last scheduler tick</span></div>
-</div>
-
-<div class="card">
-  <h2>Controls</h2>
-  <form class="inline" method="post" action="{{ url_for('admin_scan') }}">
-    <button class="btn">Scan every active field now</button></form>
-  <form class="inline" method="post" action="{{ url_for('admin_tick') }}">
-    <button class="btn ghost">Run one scheduler tick</button></form>
-  <form class="inline" method="post" action="{{ url_for('admin_mailcheck') }}">
-    <button class="btn ghost">Test the email login</button></form>
-  {% if last_tick.error %}
-    <p class="flag" style="margin-top:12px">Last tick raised: {{ last_tick.error | short(300) }}</p>
+  {% if mail_status %}
+    <div class="notice info"><span class="ic">✉</span><div>{{ mail_status }}</div></div>
   {% endif %}
-</div>
 
-<div class="card">
-  <h2>Students</h2>
-  <table>
-    <tr><th>Email</th><th>Field</th><th>Schedule</th><th>Next due</th><th>Last sent</th><th>Matches</th></tr>
-    {% for row in students %}
-      <tr>
-        <td>{{ row['email'] }}{% if row['paused'] %} <span class="muted small">(paused)</span>{% endif %}</td>
-        <td>{{ fields.label(row['field']) if row['field'] else '&mdash;' | safe }}</td>
-        <td class="small">{{ frequencies.get(row['frequency'], row['frequency']) }} at {{ row['deliver_time'] }}</td>
-        <td class="small">{{ utils.parse_iso(row['next_due_at']) | when }}</td>
-        <td class="small muted">{{ utils.ago(utils.parse_iso(row['last_sent_at'])) }}</td>
-        <td>{{ row['matches'] }}</td>
-      </tr>
-    {% endfor %}
-  </table>
-</div>
+  <div class="stats">
+    <div class="stat lead"><b>{{ students | length }}</b><span>students</span></div>
+    <div class="stat"><b>{{ pool }}</b><span>internships pooled</span></div>
+    <div class="stat"><b>{{ due_fields | length }}</b><span>fields due a scan</span></div>
+    <div class="stat"><b class="small" style="font-size:.9375rem; padding-top:7px">
+      {{ utils.parse_iso(last_tick.at) | when if last_tick.at else 'not yet' }}</b>
+      <span>last scheduler tick</span></div>
+  </div>
 
-<div class="card">
-  <h2>Field pools</h2>
-  {% if not scans %}
-    <p class="muted" style="margin:0">No field has been scanned yet.</p>
-  {% else %}
-    <table>
-      <tr><th>Field</th><th>Last scan</th><th>Postings seen</th><th>Internships kept</th><th>Problems</th></tr>
-      {% for row in scans %}
-        <tr>
-          <td>{{ fields.label(row['field']) }}</td>
-          <td class="small">{{ utils.ago(utils.parse_iso(row['last_scan_at'])) }}</td>
-          <td>{{ row['scraped'] }}</td>
-          <td>{{ row['kept'] }}</td>
-          <td class="small muted">{{ row['detail'] or '&mdash;' | safe }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% endif %}
-</div>
+  <div class="card">
+    <div class="head"><h2>Controls</h2></div>
+    <div class="body row">
+      <form class="inline" method="post" action="{{ url_for('admin_scan') }}">
+        <button class="btn">Scan every active field now</button></form>
+      <form class="inline" method="post" action="{{ url_for('admin_tick') }}">
+        <button class="btn ghost">Run one scheduler tick</button></form>
+      <form class="inline" method="post" action="{{ url_for('admin_mailcheck') }}">
+        <button class="btn ghost">Test the email login</button></form>
+    </div>
+    {% if last_tick.error %}
+      <div class="body" style="border-top:1px solid var(--line-soft)">
+        <div class="flag" style="color:var(--warn)">
+          <span>⚠</span><span>Last tick raised: {{ last_tick.error | short(300) }}</span>
+        </div>
+      </div>
+    {% endif %}
+  </div>
 
-<div class="card">
-  <h2>Recent deliveries</h2>
-  {% if not recent %}
-    <p class="muted" style="margin:0">Nothing sent yet.</p>
-  {% else %}
-    <table>
-      <tr><th>When</th><th>To</th><th>Items</th><th>Channel</th><th>Detail</th></tr>
-      {% for row in recent %}
-        <tr>
-          <td class="small">{{ utils.parse_iso(row['created_at']) | when }}</td>
-          <td class="small">{{ row['email'] }}</td>
-          <td>{{ row['item_count'] }}</td>
-          <td class="small">{{ row['channel'] }}</td>
-          <td class="small muted">{{ row['detail'] | short(90) }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% endif %}
+  <div class="card">
+    <div class="head"><h2>Students</h2></div>
+    {% if not students %}
+      <div class="empty"><div class="big">◎</div><h3>Nobody enrolled yet</h3>
+        <p>The first person to enroll becomes the operator, unless ADMIN_EMAILS is set.</p></div>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Email</th><th>Field</th><th>Schedule</th><th>Next due</th>
+                     <th>Last sent</th><th>Matches</th></tr></thead>
+          <tbody>
+            {% for row in students %}
+              <tr>
+                <td>
+                  {{ row['email'] }}
+                  {% if row['paused'] %} <span class="tag">paused</span>{% endif %}
+                </td>
+                <td>{{ fields.label(row['field']) if row['field'] else '—' }}</td>
+                <td class="small nowrap">
+                  {{ frequencies.get(row['frequency'], row['frequency']) }} at {{ row['deliver_time'] }}
+                </td>
+                <td class="small nowrap">{{ utils.parse_iso(row['next_due_at']) | when }}</td>
+                <td class="small muted nowrap">{{ utils.ago(utils.parse_iso(row['last_sent_at'])) }}</td>
+                <td class="num">{{ row['matches'] }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="head"><h2>Field pools</h2></div>
+    {% if not scans %}
+      <div class="empty"><div class="big">◷</div><h3>No field scanned yet</h3>
+        <p>A field is scanned once a student is waiting on it.</p></div>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Field</th><th>Last scan</th><th>Seen</th><th>Kept</th><th>Problems</th></tr></thead>
+          <tbody>
+            {% for row in scans %}
+              <tr>
+                <td>{{ fields.label(row['field']) }}</td>
+                <td class="small nowrap">{{ utils.ago(utils.parse_iso(row['last_scan_at'])) }}</td>
+                <td class="num">{{ row['scraped'] }}</td>
+                <td class="num">{{ row['kept'] }}</td>
+                <td class="small muted">{{ row['detail'] or '—' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="head"><h2>Recent deliveries</h2></div>
+    {% if not recent %}
+      <div class="empty"><div class="big">✉</div><h3>Nothing sent yet</h3>
+        <p>Digests appear here as they go out.</p></div>
+    {% else %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>When</th><th>To</th><th>Items</th><th>Channel</th><th>Detail</th></tr></thead>
+          <tbody>
+            {% for row in recent %}
+              <tr>
+                <td class="small nowrap">{{ utils.parse_iso(row['created_at']) | when }}</td>
+                <td class="small">{{ row['email'] }}</td>
+                <td class="num">{{ row['item_count'] }}</td>
+                <td class="small">{{ row['channel'] }}</td>
+                <td class="small muted">{{ row['detail'] | short(80) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
 </div>
 {% endblock %}

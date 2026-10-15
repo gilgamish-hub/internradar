@@ -3,42 +3,57 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}{{ brand }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128269;</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%234f46e5'/><text x='16' y='23' font-size='18' font-family='system-ui' font-weight='bold' fill='white' text-anchor='middle'>i</text></svg>">
 </head>
 <body>
-<header class="top">
+
+<header class="topbar">
   <div class="inner">
-    <a class="logo" href="{{ url_for('index') }}">Intern<span>Radar</span></a>
-    <nav>
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="mark">i</span>{{ brand }}
+    </a>
+    <nav class="nav">
       {% if user %}
         <a href="{{ url_for('dashboard') }}" class="{{ 'on' if request.endpoint == 'dashboard' }}">Internships</a>
         <a href="{{ url_for('digest_history') }}" class="{{ 'on' if request.endpoint == 'digest_history' }}">Deliveries</a>
         <a href="{{ url_for('settings') }}" class="{{ 'on' if request.endpoint == 'settings' }}">Settings</a>
-        {% if user['is_admin'] %}<a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint == 'admin' }}">Admin</a>{% endif %}
-        <form class="inline" method="post" action="{{ url_for('logout') }}">
-          <button class="btn ghost small">Sign out</button>
+        {% if user['is_admin'] %}
+          <a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint == 'admin' }}">Admin</a>
+        {% endif %}
+        <form class="inline" method="post" action="{{ url_for('logout') }}" style="margin-left:6px">
+          <button class="btn quiet sm">Sign out</button>
         </form>
       {% else %}
-        <a href="{{ url_for('login') }}">Sign in</a>
-        <a class="btn small" href="{{ url_for('signup') }}">Enroll free</a>
+        <a href="{{ url_for('login') }}" class="{{ 'on' if request.endpoint == 'login' }}">Sign in</a>
+        <a class="btn sm" href="{{ url_for('signup') }}" style="margin-left:6px">Enroll</a>
       {% endif %}
     </nav>
   </div>
 </header>
 
-<div class="wrap {% block wrapclass %}{% endblock %}">
+<main class="wrap {% block wrapclass %}{% endblock %}">
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-      <div class="notice {{ 'ok' if category == 'ok' else 'warn' }}">{{ message }}</div>
-    {% endfor %}
+    {% if messages %}
+      <div class="stack sm" style="margin-bottom:18px">
+        {% for category, message in messages %}
+          <div class="notice {{ 'ok' if category == 'ok' else 'warn' }}">
+            <span class="ic">{{ '✓' if category == 'ok' else '!' }}</span>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
   {% endwith %}
-  {% block body %}{% endblock %}
-</div>
 
-<footer class="foot">
-  {{ brand }} &middot; no fees, ever &mdash; if an internship asks you for money, it is not an internship.
+  {% block body %}{% endblock %}
+</main>
+
+<footer class="pagefoot">
+  {{ brand }} · no fees, ever — if an internship asks you for money, it is not an internship.
 </footer>
+
 </body>
 </html>

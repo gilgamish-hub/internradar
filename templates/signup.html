@@ -1,40 +1,132 @@
 {% extends "base.html" %}
-{% block title %}Enroll &mdash; {{ brand }}{% endblock %}
-{% block wrapclass %}narrow{% endblock %}
+{% block title %}Enroll — {{ brand }}{% endblock %}
 
 {% block body %}
-<h1>Enroll</h1>
-<p class="lede">Two minutes now, and the internships come to you from tomorrow morning.</p>
+<div class="stack lg">
 
-{% if errors %}
-  <div class="notice warn">
-    <b>Fix these first:</b>
-    <ul style="margin:6px 0 0; padding-left:20px">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  <div>
+    <h1>Enroll</h1>
+    <p class="lede" style="margin-top:8px">
+      A minute now, and the internships come to you from tomorrow morning.
+    </p>
   </div>
-{% endif %}
 
-<form method="post" class="card">
-  <div class="row">
-    <div>
-      <label class="lbl" for="name">Your name</label>
-      <input type="text" id="name" name="name" required value="{{ values.get('name') or '' }}">
+  {% if errors %}
+    <div class="notice warn">
+      <span class="ic">!</span>
+      <div>
+        <b>Fix these first</b>
+        <ul style="margin:6px 0 0; padding-left:18px">
+          {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+        </ul>
+      </div>
     </div>
-    <div>
-      <label class="lbl" for="email">Email <span class="hint">&mdash; where the digest goes</span></label>
-      <input type="email" id="email" name="email" required value="{{ values.get('email') or '' }}">
+  {% endif %}
+
+  <form method="post" id="enroll-form">
+    <div class="steps" id="steps" hidden></div>
+
+    <div class="card">
+      <section class="panel" data-label="Account">
+        <div class="section">
+          <div class="about">
+            <h3>Your account</h3>
+            <p>The email is where the digest lands, and how you sign back in.</p>
+          </div>
+          <div class="fields">
+            <div class="cols">
+              <div>
+                <label class="lbl" for="name">Name</label>
+                <input type="text" id="name" name="name" required autocomplete="name"
+                       value="{{ values.get('name') or '' }}">
+              </div>
+              <div>
+                <label class="lbl" for="email">Email</label>
+                <input type="email" id="email" name="email" required autocomplete="email"
+                       value="{{ values.get('email') or '' }}">
+              </div>
+            </div>
+            <div>
+              <label class="lbl" for="password">Password <span class="hint">— at least 8 characters</span></label>
+              <input type="password" id="password" name="password" required minlength="8"
+                     autocomplete="new-password" style="max-width:340px">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {% include "_prefs.html" %}
+
+      <div class="foot">
+        <button type="button" class="btn ghost" id="back" hidden>Back</button>
+        <div class="grow dim small" id="step-hint"></div>
+        <button type="button" class="btn" id="next" hidden>Continue</button>
+        <button type="submit" class="btn" id="submit">Enroll and start receiving internships</button>
+      </div>
     </div>
-  </div>
-  <label class="lbl" for="password">Password <span class="hint">&mdash; at least 8 characters</span></label>
-  <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+  </form>
 
-  {% include "_prefs.html" %}
+  <p class="dim small" style="max-width:60ch">
+    Your details stay in this portal's own database. Nothing is sold, shared or posted
+    anywhere, and you are never asked to pay for anything.
+    Already enrolled? <a href="{{ url_for('login') }}">Sign in</a>.
+  </p>
+</div>
 
-  <p style="margin-top:22px">
-    <button class="btn" type="submit">Enroll and start receiving internships</button>
-  </p>
-  <p class="muted small" style="margin:0">
-    Your details stay in this portal's own database. Nothing is sold, shared or posted anywhere,
-    and you are never asked to pay for anything.
-  </p>
-</form>
+<script>
+  // Progressive enhancement: with JavaScript off, every panel is simply visible
+  // and the form is one long page that still submits correctly.
+  (function wizard() {
+    const form   = document.getElementById('enroll-form');
+    const panels = [...form.querySelectorAll('.panel')];
+    if (panels.length < 2) return;
+
+    const bar    = document.getElementById('steps');
+    const back   = document.getElementById('back');
+    const next   = document.getElementById('next');
+    const submit = document.getElementById('submit');
+    const hint   = document.getElementById('step-hint');
+    let at = 0;
+
+    bar.innerHTML = panels.map(p =>
+      `<div class="step"><div class="bar"></div><div class="lab">${p.dataset.label}</div></div>`
+    ).join('');
+    const marks = [...bar.children];
+    [bar, back, next].forEach(el => el.hidden = false);
+
+    function show(index) {
+      at = index;
+      panels.forEach((panel, i) => panel.hidden = i !== index);
+      marks.forEach((mark, i) => {
+        mark.className = 'step' + (i === index ? ' on' : i < index ? ' done' : '');
+      });
+      back.hidden = index === 0;
+      next.hidden = index === panels.length - 1;
+      submit.hidden = index !== panels.length - 1;
+      hint.textContent = `Step ${index + 1} of ${panels.length}`;
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    // Don't let someone reach step 3 with step 1 half-filled.
+    function valid(panel) {
+      for (const input of panel.querySelectorAll('input, select')) {
+        if (!input.checkValidity()) { input.reportValidity(); return false; }
+      }
+      return true;
+    }
+
+    next.addEventListener('click', () => { if (valid(panels[at])) show(at + 1); });
+    back.addEventListener('click', () => show(at - 1));
+
+    // Enter should advance a step, not submit a half-finished form.
+    form.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && at < panels.length - 1 && event.target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
+        if (valid(panels[at])) show(at + 1);
+      }
+    });
+
+    show(0);
+  })();
+</script>
 {% endblock %}

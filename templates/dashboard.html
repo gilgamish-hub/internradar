@@ -1,121 +1,149 @@
 {% extends "base.html" %}
-{% block title %}Your internships &mdash; {{ brand }}{% endblock %}
+{% block title %}Your internships — {{ brand }}{% endblock %}
 
 {% block body %}
-<div class="between" style="margin-top:26px">
-  <div>
-    <h1 style="margin:0">{{ fields.label(profile.field) }} internships</h1>
-    <p class="muted" style="margin:6px 0 0">
-      {{ cities.labels(profile.cities) }}
-      {% if profile.min_stipend %}&middot; Rs {{ '{:,}'.format(profile.min_stipend) }}/month or more{% endif %}
-      &middot; {{ frequencies.get(profile.frequency, profile.frequency) | lower }}
-      at {{ profile.deliver_time }}
-    </p>
-  </div>
-  <form method="post" action="{{ url_for('send_now') }}">
-    <button class="btn">Send my digest now</button>
-  </form>
-</div>
+<div class="stack lg">
 
-{% if profile.paused %}
-  <div class="notice warn">
-    Deliveries are paused. New internships still pile up here.
-    <a href="{{ url_for('settings') }}">Resume them in settings</a>.
+  <div class="row between">
+    <div class="grow">
+      <h1>{{ fields.label(profile.field) }}</h1>
+      <div class="row" style="gap:6px 10px; margin-top:8px">
+        <span class="tag">{{ cities.labels(profile.cities) }}</span>
+        <span class="tag">
+          {% if profile.min_stipend %}₹{{ '{:,}'.format(profile.min_stipend) }}/month or more
+          {% else %}any stipend{% endif %}
+        </span>
+        <span class="tag">{{ frequencies.get(profile.frequency, profile.frequency) | lower }} at {{ profile.deliver_time }}</span>
+      </div>
+    </div>
+    <form method="post" action="{{ url_for('send_now') }}">
+      <button class="btn">Send my digest now</button>
+    </form>
   </div>
-{% else %}
-  <div class="notice info">
-    Next delivery <b>{{ next_due | when(profile.tz_offset) }}</b>{% if waiting %},
-    with {{ waiting }} internship{{ 's' if waiting != 1 }} queued for it{% endif %}.
-    {% if not profile.email_on %} Email is off for you, so it will simply appear here.{% endif %}
+
+  {% if profile.paused %}
+    <div class="notice warn">
+      <span class="ic">⏸</span>
+      <div>Deliveries are paused — new internships still collect here.
+        <a href="{{ url_for('settings') }}">Resume them</a>.</div>
+    </div>
+  {% else %}
+    <div class="notice info">
+      <span class="ic">→</span>
+      <div>
+        Next delivery <b>{{ next_due | when(profile.tz_offset) }}</b>{% if waiting %},
+        with {{ waiting }} internship{{ 's' if waiting != 1 }} queued for it{% endif %}.
+        {% if not profile.email_on %} Email is off for you, so it will appear here.{% endif %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if first_scan_pending %}
+    <div class="notice warn">
+      <span class="ic">◷</span>
+      <div>Your field has not been scanned yet. The first scan starts within a minute or
+        two of the portal running and takes a few minutes — anything already pooled is below.</div>
+    </div>
+  {% endif %}
+
+  <div class="stats">
+    <div class="stat lead"><b>{{ counts.new }}</b><span>in your inbox</span></div>
+    <div class="stat"><b>{{ counts.saved }}</b><span>saved</span></div>
+    <div class="stat"><b>{{ counts.applied }}</b><span>applied</span></div>
+    <div class="stat"><b>{{ pool_size }}</b><span>pooled in your field</span></div>
+    <div class="stat"><b class="small" style="font-size:.9375rem; padding-top:7px">
+      {{ last_scan | when(profile.tz_offset) if last_scan else 'soon' }}</b><span>last scan</span></div>
   </div>
-{% endif %}
 
-{% if first_scan_pending %}
-  <div class="notice warn">
-    Your field has not been scanned yet &mdash; the first scan starts within a minute or two of the
-    portal running and takes a few minutes. Anything already in the pool is shown below meanwhile.
-  </div>
-{% endif %}
-
-<div class="stats">
-  <div class="stat"><b>{{ counts.new }}</b><span>in your inbox</span></div>
-  <div class="stat"><b>{{ counts.saved }}</b><span>saved for later</span></div>
-  <div class="stat"><b>{{ counts.applied }}</b><span>applied</span></div>
-  <div class="stat"><b>{{ pool_size }}</b><span>in the pool for your field</span></div>
-  <div class="stat"><b>{{ last_scan | when(profile.tz_offset) if last_scan else 'soon' }}</b>
-    <span>last scan</span></div>
-</div>
-
-<div class="card">
-  <div class="tabs">
-    {% for key, label in [('inbox', 'Inbox'), ('saved', 'Saved'), ('applied', 'Applied'),
-                          ('hidden', 'Hidden'), ('all', 'Everything')] %}
-      <a href="{{ url_for('dashboard', status=key) }}" class="{{ 'on' if status == key }}">{{ label }}</a>
+  <div class="segmented">
+    {% for key, label, count in [('inbox', 'Inbox', counts.new), ('saved', 'Saved', counts.saved),
+                                 ('applied', 'Applied', counts.applied),
+                                 ('hidden', 'Hidden', counts.hidden), ('all', 'Everything', none)] %}
+      <a href="{{ url_for('dashboard', status=key) }}" class="{{ 'on' if status == key }}">
+        {{ label }}{% if count %}<span class="count">{{ count }}</span>{% endif %}
+      </a>
     {% endfor %}
   </div>
 
-  {% if not items %}
-    <p class="muted" style="padding:22px 0 8px">
-      {% if status == 'inbox' %}
-        Nothing waiting. New internships land here as the scans run &mdash; you will get the next
-        batch {{ next_due | when(profile.tz_offset) }} without doing anything.
-      {% else %}
-        Nothing here yet.
-      {% endif %}
-    </p>
-  {% endif %}
-
-  {% for item in items %}
-    <div class="job">
-      <div class="between">
-        <div>
-          <div class="title">{{ item.title }}</div>
-          <div class="meta">
-            {{ item.company }} &middot; {{ item.city_label or 'Location not stated' }}
-            &middot; {{ item.pay_label }}
-            {% if item.posted %}&middot; posted {{ item.posted }}{% endif %}
-            &middot; via {{ item.source }}
-          </div>
-        </div>
-        <span class="pill {{ item.fit | lower }}">{{ item.fit }} &middot; {{ item.score }}</span>
+  <div class="card">
+    {% if not items %}
+      <div class="empty">
+        <div class="big">◎</div>
+        <h3>{% if status == 'inbox' %}Nothing waiting{% else %}Nothing here yet{% endif %}</h3>
+        <p>
+          {% if status == 'inbox' %}
+            New internships land here as the scans run. The next batch reaches you
+            {{ next_due | when(profile.tz_offset) }} without you doing anything.
+          {% else %}
+            Mark internships from your inbox and they show up here.
+          {% endif %}
+        </p>
       </div>
+    {% else %}
+      <div class="jobs">
+        {% for item in items %}
+          <article class="job">
+            <div class="row between" style="align-items:flex-start; flex-wrap:nowrap; gap:14px">
+              <div class="grow">
+                <div class="title">
+                  <a href="{{ item.link }}" target="_blank" rel="noopener">{{ item.title }}</a>
+                </div>
+                <div class="meta">
+                  <span>{{ item.company }}</span><span class="sep">·</span>
+                  <span>{{ item.city_label or 'Location not stated' }}</span><span class="sep">·</span>
+                  <span>{{ item.pay_label }}</span>
+                  {% if item.posted %}<span class="sep">·</span><span>posted {{ item.posted }}</span>{% endif %}
+                  <span class="sep">·</span><span>{{ item.source }}</span>
+                </div>
+              </div>
+              <span class="pill {{ item.fit | lower }}">{{ item.fit }} {{ item.score }}</span>
+            </div>
 
-      <div>
-        {% for reason in item.reasons.get('good', []) %}<span class="chip">{{ reason }}</span>{% endfor %}
+            {% if item.reasons.get('good') %}
+              <div class="why">
+                {% for reason in item.reasons.get('good', [])[:5] %}
+                  <span class="tag accent">{{ reason }}</span>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            {% for warning in item.reasons.get('warn', []) %}
+              <div class="flag"><span>⚠</span><span>{{ warning }}</span></div>
+            {% endfor %}
+
+            <div class="acts">
+              <a class="btn sm" href="{{ item.link }}" target="_blank" rel="noopener">Open posting</a>
+              {% if item.status != 'applied' %}
+                <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='apply') }}">
+                  <button class="btn ghost sm">I applied</button></form>
+              {% endif %}
+              {% if item.status != 'saved' %}
+                <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='save') }}">
+                  <button class="btn ghost sm">Save</button></form>
+              {% endif %}
+              {% if item.status != 'hidden' %}
+                <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='hide') }}">
+                  <button class="btn quiet sm">Not interested</button></form>
+              {% else %}
+                <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='reset') }}">
+                  <button class="btn quiet sm">Back to inbox</button></form>
+              {% endif %}
+              <span class="dim small" style="margin-left:auto">
+                {% if item.sent_at %}sent {{ item.sent_ago }}{% else %}queued for your next digest{% endif %}
+              </span>
+            </div>
+
+            {% if item.description %}
+              <details>
+                <summary>What the posting says</summary>
+                <p>{{ item.description | short(700) }}</p>
+              </details>
+            {% endif %}
+          </article>
+        {% endfor %}
       </div>
-      {% for warning in item.reasons.get('warn', []) %}
-        <div class="flag">&#9888; {{ warning }}</div>
-      {% endfor %}
+    {% endif %}
+  </div>
 
-      <div class="acts">
-        <a class="btn small" href="{{ item.link }}" target="_blank" rel="noopener">Open the posting</a>
-        {% if item.status != 'applied' %}
-          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='apply') }}">
-            <button class="btn ghost small">I applied</button></form>
-        {% endif %}
-        {% if item.status != 'saved' %}
-          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='save') }}">
-            <button class="btn ghost small">Save</button></form>
-        {% endif %}
-        {% if item.status != 'hidden' %}
-          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='hide') }}">
-            <button class="btn ghost small">Not interested</button></form>
-        {% else %}
-          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='reset') }}">
-            <button class="btn ghost small">Back to inbox</button></form>
-        {% endif %}
-        <span class="muted small">
-          {% if item.sent_at %}sent {{ item.sent_ago }}{% else %}queued for your next digest{% endif %}
-        </span>
-      </div>
-
-      {% if item.description %}
-        <details style="margin-top:10px">
-          <summary class="muted small" style="cursor:pointer">What the posting says</summary>
-          <p class="small muted" style="margin:8px 0 0">{{ item.description | short(900) }}</p>
-        </details>
-      {% endif %}
-    </div>
-  {% endfor %}
 </div>
 {% endblock %}

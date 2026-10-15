@@ -291,7 +291,7 @@ def dashboard(user):
             SELECT m.id, m.score, m.fit, m.reasons_json, m.status, m.sent_at, p.*
               FROM matches m JOIN postings p ON p.key = m.posting_key
              WHERE m.user_id = ? AND {where}
-             ORDER BY m.score DESC, p.last_seen DESC LIMIT 200""", (user["id"],))
+             ORDER BY m.score DESC, p.last_seen DESC LIMIT 60""", (user["id"],))
         items = []
         for match in rows:
             data = dict(match)

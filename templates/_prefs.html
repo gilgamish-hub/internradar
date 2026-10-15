@@ -1,140 +1,208 @@
 {# The preference block, shared by signup and settings so the two can never
-   drift apart. Expects: values, field_choices, city_choices. #}
+   drift apart. Each .panel is one labelled section here, and one step of the
+   wizard on the signup page. Expects: values, field_choices, city_choices. #}
 
-<label class="lbl" for="field">Your field <span class="hint">&mdash; this decides what gets searched for you</span></label>
-<select id="field" name="field" required onchange="renderSkills()">
-  <option value="">Choose a field&hellip;</option>
-  {% for key, label in field_choices %}
-    <option value="{{ key }}" {% if values.get('field') == key %}selected{% endif %}>{{ label }}</option>
-  {% endfor %}
-</select>
+<section class="panel" data-label="Your field">
+  <div class="section">
+    <div class="about">
+      <h3>Your field</h3>
+      <p>This decides what gets searched for you, and what counts as a match.</p>
+    </div>
+    <div class="fields">
+      <div>
+        <label class="lbl" for="field">Field</label>
+        <select id="field" name="field" required onchange="renderSkills()">
+          <option value="">Choose a field…</option>
+          {% for key, label in field_choices %}
+            <option value="{{ key }}" {% if values.get('field') == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="lbl">Skills you already have
+          <span class="hint">— optional. A posting asking for these ranks higher.</span></label>
+        <div class="chips" id="skills"></div>
+        <p class="field-help" id="skills-empty">Pick a field and its skills appear here.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<label class="lbl">Skills you already have
-  <span class="hint">&mdash; optional, but a posting that wants these is ranked higher</span></label>
-<div class="checks" id="skills"></div>
-<p class="muted small" id="skills-empty">Pick your field first and its skills appear here.</p>
+<section class="panel" data-label="Place &amp; pay">
+  <div class="section">
+    <div class="about">
+      <h3>Where and what pay</h3>
+      <p>Anything outside these is filtered out before it ever reaches you.</p>
+    </div>
+    <div class="fields">
+      <div>
+        <label class="lbl">Cities you can work in</label>
+        {% set chosen_cities = values.get('cities') or [cities.ANYWHERE] %}
+        <div class="chips">
+          {% for key, label in city_choices %}
+            <label class="chip-check">
+              <input type="checkbox" name="cities" value="{{ key }}"
+                     {% if key in chosen_cities %}checked{% endif %}>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
 
-<label class="lbl">Where you can work <span class="hint">&mdash; pick as many as apply</span></label>
-<div class="checks">
-  {% set chosen_cities = values.get('cities') or [cities.ANYWHERE] %}
-  {% for key, label in city_choices %}
-    <label class="check">
-      <input type="checkbox" name="cities" value="{{ key }}" {% if key in chosen_cities %}checked{% endif %}>
-      <span>{{ label }}</span>
-    </label>
-  {% endfor %}
-</div>
+      <div>
+        <label class="lbl" for="min_stipend">Lowest monthly stipend worth your time</label>
+        <div class="input-prefix" style="max-width:220px">
+          <span>₹</span>
+          <input type="number" id="min_stipend" name="min_stipend" min="0" step="1000"
+                 value="{{ values.get('min_stipend') or 0 }}">
+        </div>
+        <p class="field-help">
+          0 sends you everything. Most postings never state a stipend — those are
+          still sent, with a note, rather than thrown away.
+        </p>
+      </div>
 
-<div class="row">
-  <div>
-    <label class="lbl" for="min_stipend">Lowest monthly stipend worth your time (Rs)</label>
-    <input type="number" id="min_stipend" name="min_stipend" min="0" step="1000"
-           value="{{ values.get('min_stipend') or 0 }}">
-    <p class="muted small" style="margin:6px 0 0">
-      0 means send everything. Postings that never state a stipend are still sent, but flagged.
-    </p>
+      <div class="stack sm">
+        <label class="switch">
+          <input type="checkbox" name="remote_ok" value="1" {% if values.get('remote_ok', 1) %}checked{% endif %}>
+          <span class="track"></span>
+          <span class="text">Remote internships are fine</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="allow_unpaid" value="1" {% if values.get('allow_unpaid') %}checked{% endif %}>
+          <span class="track"></span>
+          <span class="text">Include unpaid internships
+            <small>Off by default.</small></span>
+        </label>
+      </div>
+    </div>
   </div>
-  <div>
-    <label class="lbl" for="deliver_time">Delivery time <span class="hint">&mdash; your own clock</span></label>
-    <input type="time" id="deliver_time" name="deliver_time" required
-           value="{{ values.get('deliver_time') or '09:00' }}">
-    <input type="hidden" name="tz_offset" id="tz_offset"
-           value="{{ values.get('tz_offset') or 330 }}">
-    <p class="muted small" style="margin:6px 0 0">
-      This is the hour your digest arrives, in <span id="tz_name">your</span> time.
-    </p>
-  </div>
-</div>
+</section>
 
-<div class="row">
-  <div>
-    <label class="lbl" for="frequency">How often</label>
-    <select id="frequency" name="frequency">
-      {% for key, label in frequencies.items() %}
-        <option value="{{ key }}" {% if (values.get('frequency') or 'daily') == key %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-  </div>
-  <div>
-    <label class="lbl" for="max_items">Internships per digest</label>
-    <input type="number" id="max_items" name="max_items" min="3" max="25"
-           value="{{ values.get('max_items') or 10 }}">
-  </div>
-</div>
+<section class="panel" data-label="Delivery">
+  <div class="section">
+    <div class="about">
+      <h3>When to deliver</h3>
+      <p>The whole point: you do not come looking, it arrives.</p>
+    </div>
+    <div class="fields">
+      <div class="cols">
+        <div>
+          <label class="lbl" for="deliver_time">Time</label>
+          <input type="time" id="deliver_time" name="deliver_time" required
+                 value="{{ values.get('deliver_time') or '09:00' }}">
+          <input type="hidden" name="tz_offset" id="tz_offset"
+                 value="{{ values.get('tz_offset') or 330 }}">
+          <p class="field-help">In <span id="tz_name">your own</span> time.</p>
+        </div>
+        <div>
+          <label class="lbl" for="frequency">How often</label>
+          <select id="frequency" name="frequency">
+            {% for key, label in frequencies.items() %}
+              <option value="{{ key }}" {% if (values.get('frequency') or 'daily') == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="lbl" for="max_items">Per digest</label>
+          <input type="number" id="max_items" name="max_items" min="3" max="25"
+                 value="{{ values.get('max_items') or 10 }}">
+          <p class="field-help">Between 3 and 25.</p>
+        </div>
+      </div>
 
-<label class="lbl">Also</label>
-<label class="check">
-  <input type="checkbox" name="email_on" value="1" {% if values.get('email_on', 1) %}checked{% endif %}>
-  <span>Email me the digest{% if not email_enabled %}
-    <span class="muted small">(email is not configured on this server yet &mdash; until it is, digests
-    wait for you on the dashboard)</span>{% endif %}</span>
-</label>
-<label class="check">
-  <input type="checkbox" name="remote_ok" value="1" {% if values.get('remote_ok', 1) %}checked{% endif %}>
-  <span>Remote internships are fine</span>
-</label>
-<label class="check">
-  <input type="checkbox" name="allow_unpaid" value="1" {% if values.get('allow_unpaid') %}checked{% endif %}>
-  <span>Include unpaid internships</span>
-</label>
+      <label class="switch">
+        <input type="checkbox" name="email_on" value="1" {% if values.get('email_on', 1) %}checked{% endif %}>
+        <span class="track"></span>
+        <span class="text">Email me the digest
+          {% if not email_enabled %}
+            <small>Email is not set up on this server yet — until it is, each digest
+              waits for you on your dashboard.</small>
+          {% endif %}
+        </span>
+      </label>
+    </div>
+  </div>
+</section>
 
-<h3>About you <span class="muted small" style="font-weight:400">&mdash; all optional, kept on this machine</span></h3>
-<div class="row">
-  <div>
-    <label class="lbl" for="college">College</label>
-    <input type="text" id="college" name="college" value="{{ values.get('college') or '' }}">
+<section class="panel" data-label="About you">
+  <div class="section">
+    <div class="about">
+      <h3>About you</h3>
+      <p>All optional. Kept on this machine, shown to nobody, sold to nobody.</p>
+    </div>
+    <div class="fields">
+      <div class="cols">
+        <div>
+          <label class="lbl" for="college">College</label>
+          <input type="text" id="college" name="college" value="{{ values.get('college') or '' }}">
+        </div>
+        <div>
+          <label class="lbl" for="grad_year">Graduating in</label>
+          <input type="text" id="grad_year" name="grad_year" placeholder="2026"
+                 value="{{ values.get('grad_year') or '' }}">
+        </div>
+      </div>
+      <div class="cols">
+        <div>
+          <label class="lbl" for="phone">Phone</label>
+          <input type="text" id="phone" name="phone" value="{{ values.get('phone') or '' }}">
+        </div>
+        <div>
+          <label class="lbl" for="linkedin">LinkedIn</label>
+          <input type="text" id="linkedin" name="linkedin" placeholder="linkedin.com/in/…"
+                 value="{{ values.get('linkedin') or '' }}">
+        </div>
+      </div>
+      <div>
+        <label class="lbl" for="resume_link">Resume link
+          <span class="hint">— Drive or GitHub, so it is one click away when you apply</span></label>
+        <input type="text" id="resume_link" name="resume_link" value="{{ values.get('resume_link') or '' }}">
+      </div>
+    </div>
   </div>
-  <div>
-    <label class="lbl" for="grad_year">Graduating in</label>
-    <input type="text" id="grad_year" name="grad_year" placeholder="2026"
-           value="{{ values.get('grad_year') or '' }}">
-  </div>
-</div>
-<div class="row">
-  <div>
-    <label class="lbl" for="phone">Phone</label>
-    <input type="text" id="phone" name="phone" value="{{ values.get('phone') or '' }}">
-  </div>
-  <div>
-    <label class="lbl" for="linkedin">LinkedIn</label>
-    <input type="text" id="linkedin" name="linkedin" value="{{ values.get('linkedin') or '' }}">
-  </div>
-</div>
-<label class="lbl" for="resume_link">Resume link <span class="hint">&mdash; Drive or GitHub, so it is one click away when you apply</span></label>
-<input type="text" id="resume_link" name="resume_link" value="{{ values.get('resume_link') or '' }}">
+</section>
 
 <script>
   const SKILLS = {{ skills_by_field | tojson }};
   const PICKED = new Set({{ (values.get('skills') or []) | tojson }});
+  const skillBox = document.getElementById('skills');
 
   function renderSkills() {
-    const field = document.getElementById('field').value;
-    const box = document.getElementById('skills');
-    const empty = document.getElementById('skills-empty');
-    const list = SKILLS[field] || [];
-    box.innerHTML = list.map(skill => {
-      const id = 'sk-' + skill.replace(/[^a-z0-9]/gi, '');
-      const on = PICKED.has(skill) ? ' checked' : '';
-      return `<label class="check"><input type="checkbox" id="${id}" name="skills"
-              value="${skill}"${on}><span>${skill}</span></label>`;
+    const list = SKILLS[document.getElementById('field').value] || [];
+    skillBox.innerHTML = list.map(skill => {
+      const safe = skill.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+      return `<label class="chip-check"><input type="checkbox" name="skills" value="${safe}"`
+           + `${PICKED.has(skill) ? ' checked' : ''}><span>${safe}</span></label>`;
     }).join('');
-    empty.style.display = list.length ? 'none' : 'block';
+    document.getElementById('skills-empty').hidden = list.length > 0;
   }
 
-  // Remember ticks across a field change, so switching field by accident
-  // does not wipe what you had already selected.
-  document.getElementById('skills').addEventListener('change', event => {
+  // Remember ticks across a field change, so changing your mind about the
+  // field does not silently wipe the skills you had already chosen.
+  skillBox.addEventListener('change', event => {
     if (event.target.name !== 'skills') return;
     event.target.checked ? PICKED.add(event.target.value) : PICKED.delete(event.target.value);
   });
 
+  // "Anywhere in India" and a specific city contradict each other, so picking
+  // one clears the other instead of silently losing to the server.
+  (function wireCities() {
+    const boxes = [...document.querySelectorAll('input[name="cities"]')];
+    const anywhere = boxes.find(b => b.value === '{{ cities.ANYWHERE }}');
+    boxes.forEach(box => box.addEventListener('change', () => {
+      if (!box.checked) return;
+      if (box === anywhere) boxes.forEach(b => { if (b !== anywhere) b.checked = false; });
+      else if (anywhere) anywhere.checked = false;
+    }));
+  })();
+
   renderSkills();
 
-  // Take the timezone from the browser, so a student in Dubai or Berlin gets
-  // their digest at the hour they typed rather than at the server's hour.
+  // The browser knows the viewer's timezone; the server only has a default.
   try {
     document.getElementById('tz_offset').value = -new Date().getTimezoneOffset();
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (zone) document.getElementById('tz_name').textContent = zone;
+    if (zone) document.getElementById('tz_name').textContent = zone.replace('_', ' ');
   } catch (e) { /* keep whatever the server guessed */ }
 </script>
