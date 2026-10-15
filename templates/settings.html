@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Settings &mdash; {{ brand }}{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+
+{% block body %}
+<h1>Settings</h1>
+<p class="lede">
+  Change anything here and the next digest follows it &mdash;
+  {% if next_due %}currently due {{ next_due | when(values.get('tz_offset') or 330) }}{% endif %}.
+</p>
+
+{% if errors %}
+  <div class="notice warn">
+    <b>Fix these first:</b>
+    <ul style="margin:6px 0 0; padding-left:20px">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<form method="post" class="card">
+  {% include "_prefs.html" %}
+  <p style="margin-top:22px"><button class="btn" type="submit">Save</button></p>
+</form>
+
+<div class="card">
+  <h2>{{ 'Resume deliveries' if values.get('paused') else 'Pause deliveries' }}</h2>
+  <p class="muted small">
+    {% if values.get('paused') %}
+      Paused since you asked. Matches are still collected, they just are not sent.
+    {% else %}
+      Useful during exams. Internships keep piling up on your dashboard; no email goes out.
+    {% endif %}
+  </p>
+  <form method="post" action="{{ url_for('toggle_pause') }}">
+    <button class="btn ghost">{{ 'Resume' if values.get('paused') else 'Pause' }}</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Delete the account</h2>
+  <p class="muted small">
+    Everything goes: your profile, your matches, your delivery history. It cannot be undone.
+  </p>
+  <form method="post" action="{{ url_for('delete_account') }}">
+    <label class="lbl" for="confirm">Type <code>delete</code> to confirm</label>
+    <input type="text" id="confirm" name="confirm" placeholder="delete" style="max-width:220px">
+    <p style="margin-top:14px"><button class="btn danger">Delete my account</button></p>
+  </form>
+</div>
+{% endblock %}

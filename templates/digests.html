@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Deliveries &mdash; {{ brand }}{% endblock %}
+
+{% block body %}
+<h1>Deliveries</h1>
+<p class="lede">Every digest this portal has built for you, and what happened to it.</p>
+
+<div class="card">
+  {% if not rows %}
+    <p class="muted" style="margin:0">Nothing yet. Your first digest goes out at your delivery time.</p>
+  {% else %}
+    <table>
+      <tr><th>When</th><th>Internships</th><th>How</th><th>Result</th></tr>
+      {% for row in rows %}
+        <tr>
+          <td>{{ utils.parse_iso(row['created_at']) | when }}</td>
+          <td>{{ row['item_count'] }}</td>
+          <td>
+            {% if row['channel'] == 'email' %}emailed
+            {% elif row['channel'] == 'outbox' %}written to data/outbox
+            {% else %}dashboard only{% endif %}
+          </td>
+          <td class="{{ 'muted' if row['ok'] else '' }}" style="{{ '' if row['ok'] else 'color:var(--warn)' }}">
+            {{ row['detail'] }}
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% endif %}
+</div>
+
+{% if not email_enabled %}
+  <div class="notice warn">
+    Email is not configured on this server, so digests are written to
+    <code>data/outbox</code> as .html files you can open in a browser. Add
+    <code>SMTP_USER</code> and <code>SMTP_PASS</code> to <code>.env</code> to switch real email on.
+  </div>
+{% endif %}
+{% endblock %}

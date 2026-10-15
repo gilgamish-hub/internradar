@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Enroll &mdash; {{ brand }}{% endblock %}
+{% block wrapclass %}narrow{% endblock %}
+
+{% block body %}
+<h1>Enroll</h1>
+<p class="lede">Two minutes now, and the internships come to you from tomorrow morning.</p>
+
+{% if errors %}
+  <div class="notice warn">
+    <b>Fix these first:</b>
+    <ul style="margin:6px 0 0; padding-left:20px">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+  </div>
+{% endif %}
+
+<form method="post" class="card">
+  <div class="row">
+    <div>
+      <label class="lbl" for="name">Your name</label>
+      <input type="text" id="name" name="name" required value="{{ values.get('name') or '' }}">
+    </div>
+    <div>
+      <label class="lbl" for="email">Email <span class="hint">&mdash; where the digest goes</span></label>
+      <input type="email" id="email" name="email" required value="{{ values.get('email') or '' }}">
+    </div>
+  </div>
+  <label class="lbl" for="password">Password <span class="hint">&mdash; at least 8 characters</span></label>
+  <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+
+  {% include "_prefs.html" %}
+
+  <p style="margin-top:22px">
+    <button class="btn" type="submit">Enroll and start receiving internships</button>
+  </p>
+  <p class="muted small" style="margin:0">
+    Your details stay in this portal's own database. Nothing is sold, shared or posted anywhere,
+    and you are never asked to pay for anything.
+  </p>
+</form>
+{% endblock %}

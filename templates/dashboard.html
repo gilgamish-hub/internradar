@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Your internships &mdash; {{ brand }}{% endblock %}
+
+{% block body %}
+<div class="between" style="margin-top:26px">
+  <div>
+    <h1 style="margin:0">{{ fields.label(profile.field) }} internships</h1>
+    <p class="muted" style="margin:6px 0 0">
+      {{ cities.labels(profile.cities) }}
+      {% if profile.min_stipend %}&middot; Rs {{ '{:,}'.format(profile.min_stipend) }}/month or more{% endif %}
+      &middot; {{ frequencies.get(profile.frequency, profile.frequency) | lower }}
+      at {{ profile.deliver_time }}
+    </p>
+  </div>
+  <form method="post" action="{{ url_for('send_now') }}">
+    <button class="btn">Send my digest now</button>
+  </form>
+</div>
+
+{% if profile.paused %}
+  <div class="notice warn">
+    Deliveries are paused. New internships still pile up here.
+    <a href="{{ url_for('settings') }}">Resume them in settings</a>.
+  </div>
+{% else %}
+  <div class="notice info">
+    Next delivery <b>{{ next_due | when(profile.tz_offset) }}</b>{% if waiting %},
+    with {{ waiting }} internship{{ 's' if waiting != 1 }} queued for it{% endif %}.
+    {% if not profile.email_on %} Email is off for you, so it will simply appear here.{% endif %}
+  </div>
+{% endif %}
+
+{% if first_scan_pending %}
+  <div class="notice warn">
+    Your field has not been scanned yet &mdash; the first scan starts within a minute or two of the
+    portal running and takes a few minutes. Anything already in the pool is shown below meanwhile.
+  </div>
+{% endif %}
+
+<div class="stats">
+  <div class="stat"><b>{{ counts.new }}</b><span>in your inbox</span></div>
+  <div class="stat"><b>{{ counts.saved }}</b><span>saved for later</span></div>
+  <div class="stat"><b>{{ counts.applied }}</b><span>applied</span></div>
+  <div class="stat"><b>{{ pool_size }}</b><span>in the pool for your field</span></div>
+  <div class="stat"><b>{{ last_scan | when(profile.tz_offset) if last_scan else 'soon' }}</b>
+    <span>last scan</span></div>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    {% for key, label in [('inbox', 'Inbox'), ('saved', 'Saved'), ('applied', 'Applied'),
+                          ('hidden', 'Hidden'), ('all', 'Everything')] %}
+      <a href="{{ url_for('dashboard', status=key) }}" class="{{ 'on' if status == key }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if not items %}
+    <p class="muted" style="padding:22px 0 8px">
+      {% if status == 'inbox' %}
+        Nothing waiting. New internships land here as the scans run &mdash; you will get the next
+        batch {{ next_due | when(profile.tz_offset) }} without doing anything.
+      {% else %}
+        Nothing here yet.
+      {% endif %}
+    </p>
+  {% endif %}
+
+  {% for item in items %}
+    <div class="job">
+      <div class="between">
+        <div>
+          <div class="title">{{ item.title }}</div>
+          <div class="meta">
+            {{ item.company }} &middot; {{ item.city_label or 'Location not stated' }}
+            &middot; {{ item.pay_label }}
+            {% if item.posted %}&middot; posted {{ item.posted }}{% endif %}
+            &middot; via {{ item.source }}
+          </div>
+        </div>
+        <span class="pill {{ item.fit | lower }}">{{ item.fit }} &middot; {{ item.score }}</span>
+      </div>
+
+      <div>
+        {% for reason in item.reasons.get('good', []) %}<span class="chip">{{ reason }}</span>{% endfor %}
+      </div>
+      {% for warning in item.reasons.get('warn', []) %}
+        <div class="flag">&#9888; {{ warning }}</div>
+      {% endfor %}
+
+      <div class="acts">
+        <a class="btn small" href="{{ item.link }}" target="_blank" rel="noopener">Open the posting</a>
+        {% if item.status != 'applied' %}
+          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='apply') }}">
+            <button class="btn ghost small">I applied</button></form>
+        {% endif %}
+        {% if item.status != 'saved' %}
+          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='save') }}">
+            <button class="btn ghost small">Save</button></form>
+        {% endif %}
+        {% if item.status != 'hidden' %}
+          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='hide') }}">
+            <button class="btn ghost small">Not interested</button></form>
+        {% else %}
+          <form class="inline" method="post" action="{{ url_for('mark', match_id=item.id, action='reset') }}">
+            <button class="btn ghost small">Back to inbox</button></form>
+        {% endif %}
+        <span class="muted small">
+          {% if item.sent_at %}sent {{ item.sent_ago }}{% else %}queued for your next digest{% endif %}
+        </span>
+      </div>
+
+      {% if item.description %}
+        <details style="margin-top:10px">
+          <summary class="muted small" style="cursor:pointer">What the posting says</summary>
+          <p class="small muted" style="margin:8px 0 0">{{ item.description | short(900) }}</p>
+        </details>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+# Never commit these: .env holds an email password, and data/ holds real
+# students' accounts, their matches and the emails sent to them.
+.env
+data/
+*.db
+*.db-wal
+*.db-shm
+
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

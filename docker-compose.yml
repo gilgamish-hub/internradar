@@ -1,0 +1,21 @@
+# docker compose up -d     start it in the background
+# docker compose logs -f   watch the scans and the digests go out
+# docker compose down      stop it (the data volume survives)
+services:
+  portal:
+    build: .
+    ports:
+      - "8700:8700"
+    volumes:
+      # The database lives here. Without this volume every student is lost
+      # the moment the container is rebuilt.
+      - internradar-data:/app/data
+    environment:
+      PORTAL_BASE_URL: http://127.0.0.1:8700
+      # Uncomment to turn email on (Gmail needs an app password):
+      # SMTP_USER: yourname@gmail.com
+      # SMTP_PASS: xxxxxxxxxxxxxxxx
+    restart: unless-stopped
+
+volumes:
+  internradar-data:

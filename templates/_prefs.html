@@ -1,0 +1,140 @@
+{# The preference block, shared by signup and settings so the two can never
+   drift apart. Expects: values, field_choices, city_choices. #}
+
+<label class="lbl" for="field">Your field <span class="hint">&mdash; this decides what gets searched for you</span></label>
+<select id="field" name="field" required onchange="renderSkills()">
+  <option value="">Choose a field&hellip;</option>
+  {% for key, label in field_choices %}
+    <option value="{{ key }}" {% if values.get('field') == key %}selected{% endif %}>{{ label }}</option>
+  {% endfor %}
+</select>
+
+<label class="lbl">Skills you already have
+  <span class="hint">&mdash; optional, but a posting that wants these is ranked higher</span></label>
+<div class="checks" id="skills"></div>
+<p class="muted small" id="skills-empty">Pick your field first and its skills appear here.</p>
+
+<label class="lbl">Where you can work <span class="hint">&mdash; pick as many as apply</span></label>
+<div class="checks">
+  {% set chosen_cities = values.get('cities') or [cities.ANYWHERE] %}
+  {% for key, label in city_choices %}
+    <label class="check">
+      <input type="checkbox" name="cities" value="{{ key }}" {% if key in chosen_cities %}checked{% endif %}>
+      <span>{{ label }}</span>
+    </label>
+  {% endfor %}
+</div>
+
+<div class="row">
+  <div>
+    <label class="lbl" for="min_stipend">Lowest monthly stipend worth your time (Rs)</label>
+    <input type="number" id="min_stipend" name="min_stipend" min="0" step="1000"
+           value="{{ values.get('min_stipend') or 0 }}">
+    <p class="muted small" style="margin:6px 0 0">
+      0 means send everything. Postings that never state a stipend are still sent, but flagged.
+    </p>
+  </div>
+  <div>
+    <label class="lbl" for="deliver_time">Delivery time <span class="hint">&mdash; your own clock</span></label>
+    <input type="time" id="deliver_time" name="deliver_time" required
+           value="{{ values.get('deliver_time') or '09:00' }}">
+    <input type="hidden" name="tz_offset" id="tz_offset"
+           value="{{ values.get('tz_offset') or 330 }}">
+    <p class="muted small" style="margin:6px 0 0">
+      This is the hour your digest arrives, in <span id="tz_name">your</span> time.
+    </p>
+  </div>
+</div>
+
+<div class="row">
+  <div>
+    <label class="lbl" for="frequency">How often</label>
+    <select id="frequency" name="frequency">
+      {% for key, label in frequencies.items() %}
+        <option value="{{ key }}" {% if (values.get('frequency') or 'daily') == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="lbl" for="max_items">Internships per digest</label>
+    <input type="number" id="max_items" name="max_items" min="3" max="25"
+           value="{{ values.get('max_items') or 10 }}">
+  </div>
+</div>
+
+<label class="lbl">Also</label>
+<label class="check">
+  <input type="checkbox" name="email_on" value="1" {% if values.get('email_on', 1) %}checked{% endif %}>
+  <span>Email me the digest{% if not email_enabled %}
+    <span class="muted small">(email is not configured on this server yet &mdash; until it is, digests
+    wait for you on the dashboard)</span>{% endif %}</span>
+</label>
+<label class="check">
+  <input type="checkbox" name="remote_ok" value="1" {% if values.get('remote_ok', 1) %}checked{% endif %}>
+  <span>Remote internships are fine</span>
+</label>
+<label class="check">
+  <input type="checkbox" name="allow_unpaid" value="1" {% if values.get('allow_unpaid') %}checked{% endif %}>
+  <span>Include unpaid internships</span>
+</label>
+
+<h3>About you <span class="muted small" style="font-weight:400">&mdash; all optional, kept on this machine</span></h3>
+<div class="row">
+  <div>
+    <label class="lbl" for="college">College</label>
+    <input type="text" id="college" name="college" value="{{ values.get('college') or '' }}">
+  </div>
+  <div>
+    <label class="lbl" for="grad_year">Graduating in</label>
+    <input type="text" id="grad_year" name="grad_year" placeholder="2026"
+           value="{{ values.get('grad_year') or '' }}">
+  </div>
+</div>
+<div class="row">
+  <div>
+    <label class="lbl" for="phone">Phone</label>
+    <input type="text" id="phone" name="phone" value="{{ values.get('phone') or '' }}">
+  </div>
+  <div>
+    <label class="lbl" for="linkedin">LinkedIn</label>
+    <input type="text" id="linkedin" name="linkedin" value="{{ values.get('linkedin') or '' }}">
+  </div>
+</div>
+<label class="lbl" for="resume_link">Resume link <span class="hint">&mdash; Drive or GitHub, so it is one click away when you apply</span></label>
+<input type="text" id="resume_link" name="resume_link" value="{{ values.get('resume_link') or '' }}">
+
+<script>
+  const SKILLS = {{ skills_by_field | tojson }};
+  const PICKED = new Set({{ (values.get('skills') or []) | tojson }});
+
+  function renderSkills() {
+    const field = document.getElementById('field').value;
+    const box = document.getElementById('skills');
+    const empty = document.getElementById('skills-empty');
+    const list = SKILLS[field] || [];
+    box.innerHTML = list.map(skill => {
+      const id = 'sk-' + skill.replace(/[^a-z0-9]/gi, '');
+      const on = PICKED.has(skill) ? ' checked' : '';
+      return `<label class="check"><input type="checkbox" id="${id}" name="skills"
+              value="${skill}"${on}><span>${skill}</span></label>`;
+    }).join('');
+    empty.style.display = list.length ? 'none' : 'block';
+  }
+
+  // Remember ticks across a field change, so switching field by accident
+  // does not wipe what you had already selected.
+  document.getElementById('skills').addEventListener('change', event => {
+    if (event.target.name !== 'skills') return;
+    event.target.checked ? PICKED.add(event.target.value) : PICKED.delete(event.target.value);
+  });
+
+  renderSkills();
+
+  // Take the timezone from the browser, so a student in Dubai or Berlin gets
+  // their digest at the hour they typed rather than at the server's hour.
+  try {
+    document.getElementById('tz_offset').value = -new Date().getTimezoneOffset();
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (zone) document.getElementById('tz_name').textContent = zone;
+  } catch (e) { /* keep whatever the server guessed */ }
+</script>

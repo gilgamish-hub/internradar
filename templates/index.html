@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ brand }} &mdash; internships in your field, delivered at your time{% endblock %}
+
+{% block body %}
+<h1>Internships in your field,<br>delivered at the time you choose.</h1>
+<p class="lede">
+  Enroll once with your field, your cities and your stipend floor. From then on the portal
+  watches LinkedIn, Naukri and Indeed for you, scores every internship against your profile,
+  and sends you only the ones that fit &mdash; every day at the hour you picked. No logging in
+  to check, no spreadsheets.
+</p>
+
+<p style="margin:22px 0 6px">
+  <a class="btn" href="{{ url_for('signup') }}">Enroll &mdash; it takes a minute</a>
+  <a class="btn ghost" href="{{ url_for('login') }}">I already have an account</a>
+</p>
+
+<div class="stats" style="margin-top:26px">
+  <div class="stat"><b>{{ fields.FIELDS | length }}</b><span>fields covered</span></div>
+  <div class="stat"><b>{{ pool }}</b><span>internships in the pool</span></div>
+  <div class="stat"><b>{{ students }}</b><span>students enrolled</span></div>
+  <div class="stat"><b>0</b><span>rupees, at any point</span></div>
+</div>
+
+<div class="card">
+  <h2>How it works</h2>
+  <ol class="muted" style="margin:0; padding-left:20px; line-height:1.9">
+    <li><b style="color:var(--ink)">You enroll.</b> Field, skills you already have, cities you can
+      work in, the lowest stipend worth your time, and when you want your digest.</li>
+    <li><b style="color:var(--ink)">The portal scans.</b> Every few hours it pulls fresh internship
+      postings for the fields its students care about.</li>
+    <li><b style="color:var(--ink)">Each posting is scored out of 100</b> against your profile: title,
+      how many of your field's skills appear in the description, the stipend, the city.</li>
+    <li><b style="color:var(--ink)">At your time, your digest arrives</b> with the top matches and a
+      line on why each one matched. Nothing repeats &mdash; once sent, it never comes back.</li>
+  </ol>
+</div>
+
+<div class="row">
+  <div class="card">
+    <h2>What it refuses to send you</h2>
+    <p class="muted small" style="margin:0">
+      Any posting that mentions a registration fee, a security deposit or a &ldquo;guaranteed
+      placement&rdquo; package is dropped before it ever reaches a student. Course-style
+      &ldquo;internships&rdquo; &mdash; the ones that sell you a certificate &mdash; are allowed through
+      but marked, so you can see what you are looking at. A real employer never asks a candidate
+      for money.
+    </p>
+  </div>
+  <div class="card">
+    <h2>You stay in control</h2>
+    <p class="muted small" style="margin:0">
+      Change your field, cities, stipend floor or delivery time whenever you like &mdash; the next
+      digest follows the new settings. Pause deliveries during exams. Delete your account and
+      every row that belongs to it goes with it.
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Fields you can enroll in</h2>
+  <div>
+    {% for key, label in field_choices %}<span class="chip">{{ label }}</span>{% endfor %}
+  </div>
+  <p class="muted small" style="margin:12px 0 0">
+    Each field carries its own search terms and its own skill list, so &ldquo;related to my
+    field&rdquo; means a real match and not a keyword that happened to appear.
+  </p>
+</div>
+{% endblock %}
