@@ -120,33 +120,58 @@ every row with it.
 
 ## Turning email on
 
-Until you do this, everything still works — digests land in `data/outbox` and
-on the dashboard. Email is an upgrade, not a prerequisite.
+**Email ships switched off, and that is deliberate.** Sending needs a
+credential only you can create, so the portal is built not to depend on it:
+with no SMTP settings every digest is written to `data/outbox` as an `.html`
+file you can open in a browser, and it appears on the student's dashboard
+either way. Turning email on is an upgrade, not a prerequisite.
 
-For a Gmail account you need an **app password**. Your normal Google password
-will not work, and neither will the account without 2-step verification on.
+Gmail stopped accepting ordinary account passwords from apps in 2022. You need
+a 16-character **app password**.
 
-1. Turn on 2-step verification: <https://myaccount.google.com/security>
-2. Create an app password: <https://myaccount.google.com/apppasswords>
-3. Open `.env` and uncomment these two lines, pasting the 16 characters with
-   no spaces:
+**1. Turn on 2-Step Verification** on the account you want to send *from* —
+<https://myaccount.google.com/security>. The app-password page does not exist
+until this is on.
+
+**2. Create the app password** — <https://myaccount.google.com/apppasswords>.
+Name it anything. Google shows 16 characters in four blocks; copy them and
+**delete the spaces**.
+
+**3. Put them in `.env`**, uncommenting both lines:
 
 ```ini
 SMTP_USER=yourname@gmail.com
 SMTP_PASS=abcdefghijklmnop
 ```
 
-4. Restart the portal, then check: `/admin` → **Test the email login**, or run
-   `.venv/bin/python mailer.py` (`.venv\Scripts\python mailer.py` on Windows).
-   It tells you in one line whether the login worked.
+**4. Restart the portal.** `.env` is read once, at startup.
 
-Not on Gmail? Set `SMTP_HOST` and `SMTP_PORT` in `.env` — Outlook is
+**5. Check it.** Either `/admin` → **Test the email login**, or:
+
+```bash
+.venv/bin/python mailer.py          # Windows: .venv\Scripts\python mailer.py
+```
+
+It prints one line: the login worked, or exactly why it was refused.
+
+### Things that commonly go wrong
+
+| Symptom | Cause |
+|---|---|
+| `535 Username and Password not accepted` | You used the Google account password, not the app password. |
+| The app-passwords page says it is unavailable | 2-Step Verification is off, **or** this is a college/work Google Workspace account whose admin has disabled app passwords. Bennett, and most universities, do. Use a personal Gmail — the sending address does not have to belong to any student. |
+| Login works, nothing arrives | Check `/admin` → recent deliveries. A digest with 0 items means nothing new scored above `MIN_SCORE`, not a mail failure. |
+| Digests still land in `data/outbox` | The portal was not restarted after editing `.env`. |
+
+Nothing is ever lost to a mail failure: a refused login still writes the digest
+to `data/outbox` and records the error on `/admin`.
+
+Not on Gmail? Set `SMTP_HOST` and `SMTP_PORT` — Outlook is
 `smtp.office365.com` port `587`.
 
-**Gmail sends roughly 500 messages a day.** That is hundreds of students on a
-daily digest, which is more than this will ever need on a laptop. Past that,
-use a sending service (Resend, SES, Postmark) — the same `SMTP_*` settings
-point at those too.
+**Gmail sends roughly 500 messages a day**, which is hundreds of students on a
+daily digest. Past that, point the same `SMTP_*` settings at a sending service
+(Resend, SES, Postmark).
 
 ---
 

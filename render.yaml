@@ -1,0 +1,30 @@
+# One-click deploy to Render: https://render.com/deploy
+#
+# Render reads this file from the repo. It builds the Docker image, attaches a
+# persistent disk for the SQLite database, and generates a session secret.
+#
+# After the first deploy, set these in the dashboard (Environment):
+#   PORTAL_BASE_URL   https://<your-service>.onrender.com   (links inside emails)
+#   SMTP_USER         your Gmail address        ) optional - without them,
+#   SMTP_PASS         your 16-char app password ) digests go to data/outbox
+#   ADMIN_EMAILS      who gets the /admin page
+services:
+  - type: web
+    name: internradar
+    runtime: docker
+    plan: starter          # a free instance sleeps when idle, and a sleeping
+                           # portal neither scrapes nor sends the 9am digest
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORTAL_SECRET
+        generateValue: true     # or every restart signs everyone out
+      - key: PORTAL_HOST
+        value: 0.0.0.0
+      - key: TZ
+        value: Asia/Kolkata
+    disk:
+      # The database lives here. Without a disk, every student and every match
+      # is lost on each redeploy.
+      name: internradar-data
+      mountPath: /app/data
+      sizeGB: 1
