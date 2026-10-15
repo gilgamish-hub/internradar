@@ -57,6 +57,12 @@ BASE_URL = (_env("PORTAL_BASE_URL")
             or f"http://{'127.0.0.1' if HOST == '0.0.0.0' else HOST}:{PORT}")
 BRAND = _env("PORTAL_BRAND", "InternRadar")
 
+# Who gets the /admin page. A comma-separated list of email addresses: whoever
+# enrolls with one of them is an operator, whenever they enrol. Leave it empty
+# and the portal falls back to making the very first account the operator, so
+# a fresh install is never locked out of its own admin page.
+ADMIN_EMAILS = {e.strip().lower() for e in _env("ADMIN_EMAILS").split(",") if e.strip()}
+
 
 def secret_key() -> str:
     """A stable session key, so logins survive a restart. Generated once."""

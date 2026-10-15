@@ -72,8 +72,20 @@ python setup.py
 
 Then open **<http://127.0.0.1:8700>** and press **Enroll**.
 
-> The first account you create is the **operator** — it also gets the `/admin`
-> page, where you can see every student, every field's pool, and force a scan.
+> **Who is the operator?** The portal ships with no accounts at all — the first
+> person to enroll becomes the operator and gets the `/admin` page, where you
+> can see every student, every field's pool, and force a scan.
+>
+> If you would rather decide that in advance (so it does not depend on who
+> signs up first), put the addresses in `.env`:
+>
+> ```ini
+> ADMIN_EMAILS=you@example.com,cofounder@example.com
+> ```
+>
+> Anyone enrolling with one of those is an operator, whenever they enroll.
+> Everyone else is an ordinary student. You can also promote someone later
+> with `python manage.py admin their@email.com`.
 
 ### Want to look around first, without waiting for a scan?
 
@@ -175,6 +187,40 @@ Then `sudo systemctl enable --now internradar`.
 
 ---
 
+## Running it for other people
+
+The portal is multi-user from the start: everyone who enrolls gets their own
+field, cities, stipend floor, delivery time and inbox, and nobody can see
+anyone else's. There is no account baked into the project — a fresh clone has
+an empty database.
+
+`manage.py` is the operator's toolkit, so you never need to open the database
+by hand. On Windows put `.venv\Scripts\python` in front; on macOS/Linux
+`.venv/bin/python`.
+
+```bash
+python manage.py stats                  # what is in the database, is email on
+python manage.py users                  # every account, their field and schedule
+python manage.py admin you@example.com  # make someone an operator
+python manage.py unadmin them@ex.com    # take it away
+python manage.py send you@example.com   # build and send one digest right now
+python manage.py scan                   # scrape now instead of waiting
+python manage.py scan cybersecurity     # just one field
+python manage.py delete-user them@ex.com
+python manage.py reset-users            # remove every account, keep the pool
+python manage.py reset-all              # back to a completely empty database
+```
+
+Anything destructive copies the database first (`data/portal.backup-*.db`) and
+asks you to type `yes`. Add `--force` to skip the question in a script.
+
+**Handing the project to someone else?** Run `python manage.py reset-users`
+before you do. It clears every account while keeping the internships already
+scraped, so whoever enrolls next gets matches immediately instead of waiting
+for a first scan.
+
+---
+
 ## Settings
 
 All optional, all in `.env` (copy `.env.example` if you don't have one). The
@@ -188,6 +234,7 @@ portal reads it at startup, so restart after a change.
 | `PORTAL_HOST` | `127.0.0.1` | `0.0.0.0` lets other devices on your wifi open it. |
 | `PORTAL_BASE_URL` | `http://127.0.0.1:8700` | The links inside the emails. |
 | `PORTAL_BRAND` | `InternRadar` | Rename it to whatever you like. |
+| `ADMIN_EMAILS` | unset | Who gets `/admin`. Unset = the first account created. |
 | `SCAN_SITES` | `linkedin,naukri,indeed` | Boards to search. `glassdoor` also works. |
 | `SCAN_COUNTRY` / `SCAN_LOCATION` | `India` | Where to look. |
 | `SCAN_DAYS` | `7` | How old a posting may be. |
@@ -366,6 +413,7 @@ This is a small, honest app, not a hardened SaaS. If it is going to be public:
 | `db.py` | the SQLite schema |
 | `config.py` | every setting, read from `.env` |
 | `demo_data.py` | the sample internships behind `DEMO_MODE` |
+| `manage.py` | operator commands: accounts, admins, resets, manual scans |
 | `setup.py` | one-command setup, any OS |
 | `data/portal.db` | students, pool, matches, delivery history |
 

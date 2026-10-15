@@ -200,12 +200,17 @@ def signup():
             return render_template("signup.html", values={**values, "name": name, "email": email},
                                    city_choices=cities.choices(),
                                    field_choices=fields.field_choices(), errors=errors), 400
-        # The first person to enrol gets the admin page - that is the operator.
-        first = db.one(conn, "SELECT COUNT(*) AS n FROM users")["n"] == 0
+        # Operators are whoever is listed in ADMIN_EMAILS. With no list set,
+        # the first account to be created takes the role, so a fresh install
+        # can always reach its own admin page.
+        if config.ADMIN_EMAILS:
+            is_admin = email in config.ADMIN_EMAILS
+        else:
+            is_admin = db.one(conn, "SELECT COUNT(*) AS n FROM users")["n"] == 0
         cur = conn.execute("""INSERT INTO users (email, name, password_hash, created_at, is_admin)
                               VALUES (?, ?, ?, ?, ?)""",
                            (email, name, utils.hash_password(password),
-                            utils.iso(utils.utcnow()), int(first)))
+                            utils.iso(utils.utcnow()), int(is_admin)))
         user_id = cur.lastrowid
         save_profile(conn, user_id, values, paused=0)
         # Score whatever is already pooled, so the dashboard is never empty on
